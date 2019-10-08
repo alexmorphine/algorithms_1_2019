@@ -306,7 +306,7 @@ def parse_args(args=None):
 
 def run(args=None):
     """
-    Функция парсит аргументы командной строки и передает их в метод fit_predict класса FraudModel.
+    Функция парсит аргументы командной строки и передает их в класс Aligner.
 
     Args:
         args: Аргументы, которые надо парсить. Если None, то парсим аргументы командной строки.
@@ -322,7 +322,10 @@ def run(args=None):
     aligner = Aligner(args.seq1, args.seq2, match=args.match, mismatch=args.mismatch, gap=args.gap,
                       weights=args.weights)
 
+    # получаем матрицу
     aligner.align()
+
+    # если надо вывести выравниваение, то выводим
     if args.alignment:
         aligner.select_alignment()
         aligner.print_alignment()

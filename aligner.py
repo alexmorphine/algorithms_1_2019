@@ -9,7 +9,6 @@ class Aligner:
     def __init__(self, seq1, seq2, match=1, gap=-1, mismatch=-1, weights=False):
         """
         Инициализация аргументов
-
         Args:
             seq1 (str): последовательность 1
             seq2 (str): последовательность 2
@@ -22,9 +21,9 @@ class Aligner:
         # делаем большими и красивыми
         self.seq1 = seq1.upper()
         self.seq2 = seq2.upper()
-        self.match = match
-        self.gap = gap
-        self.mismatch = mismatch
+        self.match = np.float32(match)
+        self.gap = np.float32(gap)
+        self.mismatch = np.float32(mismatch)
 
         # устанавливаем веса
         self.weights = self.set_weights(weights)
@@ -35,7 +34,6 @@ class Aligner:
     def init_matrix(self):
         """
         Инициализация матрицы: сначала нулями, потом заполнение для добавленных спереди пропусков
-
         Returns:
             np.array: инициализированная матрица
         """
@@ -83,10 +81,8 @@ class Aligner:
     def set_weights(self, weights):
         """
         Получение матрицы весов
-
         Args:
             weights (str): название матрицы весов, может быть 'pam', 'blosum', а также False - весов нет
-
         Returns:
             pd.DataFrame: матрица весов
         """
@@ -100,20 +96,17 @@ class Aligner:
 
         # заполняем веса 0
         else:
-            seq1 = set(self.seq1 + '-')
-            seq2 = set(self.seq2 + '-')
+            seq = set(self.seq1 + self.seq2 + '-')
 
-            return pd.DataFrame(np.zeros([len(seq1), len(seq2)]), index=seq1,
-                                columns=seq2)
+            return pd.DataFrame(np.zeros([len(seq), len(seq)]), index=seq,
+                                columns=seq)
 
     def cell(self, i, j):
         """
         Заполнение клетки матрицы по Н-В
-
         Args:
             i (int): индекс элемента по оси 0
             j (int): индекс по оси 1
-
         Returns:
             float: значение в клетке
         """
@@ -175,12 +168,10 @@ class Aligner:
     def get_neighbours(self, i, j, make_tuple=False):
         """
         Получаем индексы трёх соседей: слева, сверху и слева сверху по диагонали
-
         Args:
             i (int): индекс элемента по оси 0
             j (int): индекс элемента по оси 1
             make_tuple (bool): нужно ли возвращать пары индексов в tuple (сразу для индексации) или в list
-
         Returns:
             list: список пар индексов
         """
@@ -274,10 +265,8 @@ class Aligner:
 def parse_args(args=None):
     """ Функция, которая создает парсер для аргументов командной строки, и потом сама парсит аргументы и результат
     возвращает.
-
     Args:
         args: Параметры, которые необходимо распарсить вместо аргументов командной строки.
-
     Returns:
         Namespace: с параметрами, которые смогли распарсить.
     """
@@ -287,13 +276,13 @@ def parse_args(args=None):
                         help="First sequence, any case.")
     parser.add_argument("-seq2", "--seq2", required=True, default=None, type=str,
                         help="Second sequence, any case.")
-    parser.add_argument("-match", "--match", required=False, type=int, default=1,
+    parser.add_argument("-match", "--match", required=False, type=float, default=1,
                         help="Weight of match. Defaults to 1")
 
-    parser.add_argument("-mismatch", "--mismatch", required=False, type=int, default=-1,
+    parser.add_argument("-mismatch", "--mismatch", required=False, type=float, default=-1,
                         help="Weight of mismatch. Defaults to -1")
 
-    parser.add_argument("-gap", "--gap", required=False, type=int, default=-1,
+    parser.add_argument("-gap", "--gap", required=False, type=float, default=-1,
                         help="Weight of gap. Defaults to 1")
     parser.add_argument("-weights", "--weights", required=False, default=False,
                         help="Name of weight matrix. Default is no matrix.")
@@ -307,10 +296,8 @@ def parse_args(args=None):
 def run(args=None):
     """
     Функция парсит аргументы командной строки и передает их в класс Aligner.
-
     Args:
         args: Аргументы, которые надо парсить. Если None, то парсим аргументы командной строки.
-
     """
     # Парсим аргументы командной строки или переданную строку с аргументами
     args = parse_args(args)
@@ -333,3 +320,4 @@ def run(args=None):
 
 if __name__ == "__main__":
     run()
+

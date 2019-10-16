@@ -6,7 +6,7 @@ import argparse
 class Aligner:
     """ Класс для получения выравнивания"""
 
-    def __init__(self, seq1, seq2, match=1, gap=-1, mismatch=-1, weights=False):
+    def __init__(self, seq1, seq2, match=1, gap=-1, mismatch=-1, weights=False, local=False):
         """
         Инициализация аргументов
         Args:
@@ -25,11 +25,19 @@ class Aligner:
         self.gap = np.float32(gap)
         self.mismatch = np.float32(mismatch)
 
+        # используется ли локальное выравнивание
+        self.local = local
+
         # устанавливаем веса
         self.weights = self.set_weights(weights)
 
         # инициализируем матрицу
         self.matrix = self.init_matrix()
+
+    def check_non_negativity(self, result):
+        if self.local:
+            return max(0, result)
+        return result
 
     def init_matrix(self):
         """
@@ -40,6 +48,9 @@ class Aligner:
 
         # сначала инициализируем матрицу нулями по размерам посл1 + 1, посл2 + 1; + 1 за пропуск спереди
         matrix = np.zeros([len(self.seq1) + 1, len(self.seq2) + 1])
+
+        if self.local:
+            return matrix
 
         # это чтобы выстаскивать веса
         seq = ['-' + self.seq1, '-' + self.seq2]
@@ -56,6 +67,7 @@ class Aligner:
 
                 # заполнение последовательно += self.gap
                 counter += self.gap + self.weights.loc[('-', seq[i][ax])]
+
         return matrix
 
     def align(self):
@@ -66,7 +78,7 @@ class Aligner:
         # заполняем каждую клетку
         for i in range(1, len(self.seq1) + 1):
             for j in range(1, len(self.seq2) + 1):
-                self.matrix[i, j] = self.cell(i, j)
+                self.matrix[i, j] = self.check_non_negativity(self.cell(i, j))
 
         # печатаем получившуюся матрицу
         self.print_matrix()
@@ -161,9 +173,10 @@ class Aligner:
         """
         Красиво печатаем выравнивание
         """
-
-        for alignment in self.alignment:
-            print(*alignment[::-1])
+        for cell in self.alignment:
+            print(f'\nAlignment starts in cell {cell}:')
+            for alignment in self.alignment[cell]:
+                print('\t', *alignment[::-1])
 
     def get_neighbours(self, i, j, make_tuple=False):
         """
@@ -183,7 +196,7 @@ class Aligner:
             return list(map(tuple, result))
         return result
 
-    def select_alignment(self):
+    def select_global_alignment(self):
         """
         Получение выравненных строк
         """
@@ -260,6 +273,84 @@ class Aligner:
                         self.alignment[1].append(seq2)
                         current = index
                         break
+        self.alignment = {tuple(np.array(self.matrix.shape) - 1): self.alignment}
+
+    def select_local_alignment(self):
+        matrix_max = self.matrix.max()
+        indices = np.where(self.matrix == matrix_max)
+        indices = [(x, y) for x, y in zip(*indices)]
+
+        self.alignment = {}
+
+        for start in indices:
+            # значение в текущей клетке
+            value = self.matrix[tuple(start)]
+            current = start
+
+            alignment = [[], []]
+
+            while value != 0:
+                # запоминааем текущие индексы по осям
+                first_index = current[0]
+                second_index = current[1]
+
+                # получаем троих соседей
+                idx = self.get_neighbours(first_index, second_index)
+
+                # выбираем только неотрицательные, на всякий случай
+                idx = np.array([i for i in idx if ((i[0] >= 0) and (i[1] >= 0))])
+
+                # значение в текущей клетке
+                value = self.matrix[tuple(current)]
+
+                # по каждому соседу
+                for index in idx:
+
+                    # символы, которые сейчас сравниваем
+                    seq1 = self.seq1[current[0] - 1]
+                    seq2 = self.seq2[current[1] - 1]
+
+                    # значение в клетке-соседе
+                    backtrace = self.matrix[tuple(index)]
+
+                    # если идём по диагонали
+                    if np.array_equal(index + 1, current):
+
+                        # берём вес от двух символов
+                        weight = self.weights.loc[(seq1, seq2)]
+
+                        # если символы совпадают и мы пришли из клетки по диагонали или символы по диагонали не совпали
+                        if ((value - backtrace == self.match + weight) and (seq1 == seq2)) or \
+                                (value - backtrace == self.mismatch + weight):
+                            # добавляем в результат оба символа
+                            alignment[0].append(seq1)
+                            alignment[1].append(seq2)
+
+                            # переходим в клетку-соседа
+                            current = index
+                            break
+
+                    # если идём наверх
+                    elif current[0] - index[0]:
+
+                        # берём вес для символа первой последовательности и пропуска
+                        weight = self.weights.loc[(seq1, '-')]
+                        if value - backtrace == self.gap + weight:
+                            alignment[0].append(seq1)
+                            alignment[1].append('-')
+                            current = index
+                            break
+
+                    # если идём налево, то пропуск и символ второй последовательности
+                    else:
+                        weight = self.weights.loc[('-', seq2)]
+                        if value - backtrace == self.gap + weight:
+                            alignment[0].append('-')
+                            alignment[1].append(seq2)
+                            current = index
+                            break
+
+            self.alignment[tuple(start)] = alignment
 
 
 def parse_args(args=None):
@@ -283,11 +374,13 @@ def parse_args(args=None):
                         help="Weight of mismatch. Defaults to -1")
 
     parser.add_argument("-gap", "--gap", required=False, type=float, default=-1,
-                        help="Weight of gap. Defaults to 1")
+                        help="Weight of gap. Defaults to -1")
     parser.add_argument("-weights", "--weights", required=False, default=False,
                         help="Name of weight matrix. Default is no matrix.")
     parser.add_argument("-alignment", "--alignment", required=False, action='store_true', dest='alignment',
                         help="Print alignment")
+    parser.add_argument("-local", "--local", required=False, action='store_true', dest='local',
+                        help="Make local alignment")
 
     args = parser.parse_args(args)
     return args
@@ -307,14 +400,17 @@ def run(args=None):
     # Создаем экземпляр модели
     # Передаем аргументы командной строки как параметры в метод __init__ модели
     aligner = Aligner(args.seq1, args.seq2, match=args.match, mismatch=args.mismatch, gap=args.gap,
-                      weights=args.weights)
+                      weights=args.weights, local=args.local)
 
     # получаем матрицу
     aligner.align()
 
     # если надо вывести выравниваение, то выводим
     if args.alignment:
-        aligner.select_alignment()
+        if args.local:
+            aligner.select_local_alignment()
+        else:
+            aligner.select_global_alignment()
         aligner.print_alignment()
 
 

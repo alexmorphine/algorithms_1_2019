@@ -1,5 +1,5 @@
 import unittest
-from aligner import Aligner
+from alignment.aligner import Aligner
 import numpy as np
 import pandas as pd
 
@@ -17,7 +17,7 @@ class TestAligner(unittest.TestCase):
         # создаём экземпляр
         aligner = Aligner(seq1=seq1, seq2=seq2)
         aligner.align()
-        aligner.select_alignment()
+        aligner.select_global_alignment()
 
         # нулевые веса нужного размера
         seq = set('-ABCA' + '-BDAAAC')
@@ -54,7 +54,7 @@ class TestAligner(unittest.TestCase):
 
         aligner = Aligner(seq1=seq1, seq2=seq2, gap=-0.499)
         aligner.align()
-        self.assertEqual(aligner.select_alignment(), None)
+        self.assertEqual(aligner.select_global_alignment(), None)
 
     def test_with_weight(self):
         """
@@ -65,7 +65,7 @@ class TestAligner(unittest.TestCase):
 
         aligner = Aligner(seq1=seq1, seq2=seq2, weights='pam')
         aligner.align()
-        aligner.select_alignment()
+        aligner.select_global_alignment()
         first_alignment = aligner.alignment
 
         # меняем веса в матрице сразу в двух местах, она же симметричная
@@ -74,7 +74,7 @@ class TestAligner(unittest.TestCase):
 
         # пересчитываем выравнивание
         aligner.align()
-        aligner.select_alignment()
+        aligner.select_global_alignment()
         second_alignment = aligner.alignment
 
         # хотим, чтобы были разные

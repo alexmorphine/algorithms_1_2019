@@ -24,7 +24,7 @@ class TestAligner(unittest.TestCase):
         weights = pd.DataFrame(np.zeros([len(seq), len(seq)]), index=seq, columns=seq)
 
         # матрица с сайта
-        matrix = pd.read_csv('aligner_no_weights_check.csv', delimiter=';', index_col=0, header=None, skiprows=1)
+        matrix = pd.read_csv('alignment/aligner_no_weights_check.csv', delimiter=';', index_col=0, header=None, skiprows=1)
 
         # проверяем, что веса есть и они нулевые
         self.assertEqual(np.array_equal(aligner.weights, weights.values), True)
@@ -32,12 +32,16 @@ class TestAligner(unittest.TestCase):
         # матрица с сайта совпала с посчитанной
         self.assertEqual(np.array_equal(aligner.matrix, matrix), True)
 
+        keys = aligner.alignment.keys()
+        for key in keys:
+            global_alignment = aligner.alignment[key]
+
         # есть ли пропуски
-        has_gaps = ('-' in aligner.alignment[0]) or ('-' in aligner.alignment[1])
+        has_gaps = ('-' in global_alignment[0]) or ('-' in global_alignment[1])
 
         # есть ли несовпадения
         has_mismatches = False
-        for first, second in zip(aligner.alignment[0], aligner.alignment[1]):
+        for first, second in zip(global_alignment[0], global_alignment[1]):
             if (first != second) and (first != '-') and (second != '-'):
                 has_mismatches = True
                 break

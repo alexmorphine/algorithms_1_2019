@@ -1,5 +1,4 @@
 import numpy as np
-import pandas as pd
 import argparse
 
 
@@ -70,7 +69,7 @@ class AffineAligner:
             matrix[0, 1:] = -np.inf
         return matrix
 
-    def get_indeces(self, i, j):
+    def get_indices(self, i, j):
         """
         Получение индексов соседей
 
@@ -114,7 +113,7 @@ class AffineAligner:
         """
         for i in range(1, len(self.seq1) + 1):
             for j in range(1, len(self.seq2) + 1):
-                middle, upper, lower = self.get_indeces(i, j)
+                middle, upper, lower = self.get_indices(i, j)
                 match = self.seq_match(i, j)
 
                 self.upper[i, j] = max(self.middle[upper] + self.gap_start + self.gap_continued,
@@ -190,7 +189,7 @@ class AffineAligner:
                 continue
 
             # получаем индексы для трёх матриц
-            middle, upper, lower = self.get_indeces(first_index, second_index)
+            middle, upper, lower = self.get_indices(first_index, second_index)
 
             # получаем результаты проверки на неотрицвательность индексов
             nonnegative = [x for x in map(self.check_index, [middle, upper, lower])]

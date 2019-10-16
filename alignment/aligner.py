@@ -101,9 +101,9 @@ class Aligner:
 
         if weights:
             if weights.lower() == 'pam':
-                filename = 'PAM250.txt'
+                filename = 'alignment/PAM250.txt'
             elif weights.lower() == 'blosum':
-                filename = 'BLOSUM62.txt'
+                filename = 'alignment/BLOSUM62.txt'
             return pd.read_csv(filename, delimiter=' ', index_col=0, header=0)
 
         # заполняем веса 0

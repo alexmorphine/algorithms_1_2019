@@ -4,7 +4,7 @@ import argparse
 
 
 class Aligner:
-    """ Класс для получения выравнивания"""
+    """ Класс для получения локального или глобального выравнивания с константными штрафами """
 
     def __init__(self, seq1, seq2, match=1, gap=-1, mismatch=-1, weights=False, local=False):
         """

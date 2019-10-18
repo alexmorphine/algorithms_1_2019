@@ -139,7 +139,7 @@ def run(args=None):
     # Парсим аргументы командной строки или переданную строку с аргументами
     args = parse_args(args)
 
-    print(f"Alignment started with parameters: {vars(args)}")
+    print(f"Search started with parameters: {vars(args)}")
 
     # Создаем экземпляр класса
     # Передаем аргументы командной строки как параметры в метод __init__

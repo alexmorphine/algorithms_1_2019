@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 
 
 class HMM:
@@ -16,8 +17,8 @@ class HMM:
         self.pi = pi
         self.states = states
         self.alphabet = set(seq)
-        self.B = pd.DataFrame(data=A, index=sorted(states), columns=sorted(self.alphabet))
-        self.A = pd.DataFrame(data=B, index=sorted(states), columns=sorted(states))
+        self.B = pd.DataFrame(data=B, index=sorted(states), columns=sorted(self.alphabet))
+        self.A = pd.DataFrame(data=A, index=sorted(states), columns=sorted(states))
         self.seq = seq
 
         # alpha
@@ -33,7 +34,6 @@ class HMM:
         """
         Алгоритм Витерби
         """
-
         for i, letter in enumerate(self.seq):
             for state in self.states:
                 if i == 0:
@@ -51,12 +51,14 @@ class HMM:
         """
         for i, letter in enumerate(self.seq):
             result = {}
+
             for state in self.states:
                 if i == 0:
+
                     result[state] = self.pi[state] * self.B.loc[state, letter]
                 else:
                     result[state] = 0
-                    for other_state in set(self.states):
+                    for other_state in self.states:
                         result[state] += self.forward_matrix.loc[other_state, i - 1] \
                                         * self.A.loc[other_state, state] * self.B.loc[state, letter]
 
@@ -69,11 +71,12 @@ class HMM:
         for i, letter in enumerate(self.seq[::-1]):
             number = len(self.seq) - i - 1
             for state in self.states:
-                if i == 0:
+                if not i:
                     self.backward_matrix.loc[state, number] = 1
                 else:
-                    self.backward_matrix.loc[state, number] = (self.A.loc[state, :] * self.B.loc[:,
-                                                                                      self.seq[number + 1]]).sum()
+                    self.backward_matrix.loc[state, number] = (self.backward_matrix.loc[state, number + 1]
+                                                               * self.A.loc[state, :]
+                                                               * self.B.loc[:, self.seq[number + 1]]).sum()
 
     def FB(self):
         """
@@ -84,4 +87,4 @@ class HMM:
         """
         self.forward()
         self.backward()
-        return (self.backward_matrix * self.forward_matrix).divide(self.forward_matrix.sum(axis=1), axis=0)
+        return self.forward_matrix * self.backward_matrix / self.forward_matrix.values[:, -1].sum()
